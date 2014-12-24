@@ -18,17 +18,13 @@ from optparse import OptionParser, Option, OptionGroup
 # 3rd party libs
 import vobject
 
-
-#first we need to open all the files, except the first, and remove the CALSCALE property
-#also we need to change all the files to have 
-
-
+__AUTHOR__ = u"Pekka Järvinen // Modded by Pedro Lopes"
+__YEAR__ = "2010 (original) // 2014 (Mod)"
+__VERSION__ = "0.0.2 (advanced one version from original)"
 
 
-__AUTHOR__ = u"Pekka Järvinen"
-__YEAR__ = "2010"
-__VERSION__ = "0.0.1"
-
+DEBUG = False
+counterCALSCALE = 0
 
 if __name__ == "__main__":
     banner  = u" %s" % (__VERSION__)
@@ -58,13 +54,34 @@ if __name__ == "__main__":
         combinedCalendar = vobject.iCalendar()
 
         for i in files:
-            print ("Opening '%s'.." % i)
+            if ( DEBUG):
+	       print ("Opening '%s'.." % i)
             f = open(i, 'rb')
-
-            print ("Reading '%s'.." % i)
+            if ( DEBUG):
+              print ("Reading '%s'.." % i)
             contents = f.read()
-            contents = contents.decode('utf-8')
-
+            out = open('%s_modded.ics' % i,'w')
+            s = []
+            for sentence in contents:
+                s.append(sentence)
+		if (sentence == "\n"):
+		  check_property = (''.join([str(x) for x in s]))
+                  check_property = check_property.replace("X-RICAL-TZSOURCE=", "");
+		  if (check_property.find('CALSCALE') != -1): #CALSCALE
+                    counterCALSCALE+=1 #increment that we have seen a CALSCALE
+		    if (counterCALSCALE <= 1):
+	              out.write(check_property) #first one we encounter, safe to print
+                    elif (DEBUG): 
+                      print("Avoiding further CALSCALE")
+	          else: #another property, totally safe to write
+		    if (DEBUG):
+		      print("WRITE:"+check_property)
+                    out.write(check_property)
+                  s = []
+            out.close()
+            out = open('%s_modded.ics' % i,'r')
+            contents = out.read()
+	    contents = contents.decode('utf-8')
             f.close()
 
             components = vobject.readComponents(contents, validate=True)
@@ -86,13 +103,11 @@ if __name__ == "__main__":
                 
 
         # Write iCal file
-        print ("Writing iCalendar file '%s'.." % options.icalfile)
+        if (DEBUG): 
+	  print ("Writing iCalendar file '%s'.." % options.icalfile)
         f = open(options.icalfile, 'wb')
         print(combinedCalendar)
         f.write(combinedCalendar.serialize())
         f.close()
-
-        print ("Done.")
         sys.exit(0)
-
     sys.exit(1)
